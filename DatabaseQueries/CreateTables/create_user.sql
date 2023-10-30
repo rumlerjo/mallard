@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS users(
+    user_id   INTEGER PRIMARY KEY,
+    currency  INTEGER DEFAULT 50 NOT NULL
+);

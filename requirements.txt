@@ -1,0 +1,5 @@
+discord-py-interactions
+sympy
+# pyjion will require >= .NET 6.0
+pyjion # experimenting with JIT
+pillow
