@@ -15,6 +15,7 @@ class CommandEnums(Enum):
     PING = 1
     RELOAD = 2
     CREATE_REACTION = 3
+    ADD_REACTION = 4
 
 class UserType(Enum):
     NORMAL = 1

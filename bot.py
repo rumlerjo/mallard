@@ -7,10 +7,11 @@ Authored by John Rumler/rumlerjo
 import interactions
 from os import scandir
 from typing import TypeVar, Set, Optional, Union, List, Any, Tuple
-from lib.cooldown import CooldownManager
+from Utilities.cooldown import CooldownManager
 from interactions import Extension, Snowflake, SlashContext, Permissions
-from sqlite3 import Connection, Cursor
+from sqlite3 import Connection
 from Utilities.enums import UserType
+from Utilities.bot_sql import BotSQL
 
 
 # A generic class
@@ -48,10 +49,10 @@ class Bot:
     """
     Wrapper for the bot and some of its functions.
     """
-    def __init__(self, client: interactions.Client, dbCursor: Connection) -> None:
+    def __init__(self, client: interactions.Client, dbConn: Connection) -> None:
         self._client = client
         self._cooldowns = CooldownManager()
-        self._db = dbCursor
+        self.sql = BotSQL(dbConn)
 
         # used as a checker to see which commands are running
         self._extensions: Set[Extension] = set()
@@ -138,75 +139,14 @@ class Bot:
         :return: Amount of time left in cooldown or None
         """
         return self._cooldowns.get_cooldown(userId, commandId, guildId)
-    
-    def execute_and_commit(self, queryString: str) -> None:
-        """
-        Executes and commits a query. For use when data will change. (ex: insertion, deletion)
-        :return: None
-        """
-        try:
-            self._db.execute(queryString)
-            self._db.commit()
-        except:
-            return
-
-    def execute_selection(self, queryString: str) -> List[Tuple]:
-        """
-        Make a selection query
-        :return: List of data selected, will usually be in tuple form.
-        """
-        try:
-            selectionCursor = self._db.execute(queryString)
-            return selectionCursor.fetchall()
-        except:
-            return
         
-    async def _derive_user_permissions(self, ctx: SlashContext) -> int:
-        perms = UserType.NORMAL.value
-        guildOwner = await ctx.guild.fetch_owner()
-        if str(ctx.user.id) == "311663246622982145":
-            perms = UserType.DEVELOPER.value
-        elif ctx.user.id == guildOwner.id:
-            perms = UserType.GUILD_ADMIN.value
-        else:
-            userMember = await ctx.guild.fetch_member(ctx.user.id)
-            userRoles = userMember.roles
-            for role in userRoles:
-                isAdmin = (role.permissions & Permissions.ADMINISTRATOR) == Permissions.ADMINISTRATOR
-                if isAdmin:
-                    perms = UserType.GUILD_ADMIN.value
-                    break
-        return perms
-                
-        
-    def _create_database_tables(self):
+    def _create_database_tables(self) -> None:
+        """
+        Read in and execute database creation scripts on startup
+        :return None:
+        """
         for queryFile in get_database_paths():
             fp = open(queryFile, "r")
             fpData = fp.read()
-            self.execute_and_commit(fpData)
+            self.sql.execute_and_commit(fpData)
             fp.close()
-
-    async def _confirm_guild(self, ctx: SlashContext) -> bool:
-        if not ctx.guild:
-            await ctx.send("Sorry! Commands are not currently supported outside of guild contexts.", ephemeral=True)
-            return False
-        return True
-            
-    async def _setup_user(self, ctx: SlashContext):
-
-        self.execute_and_commit(f"""
-                                    INSERT OR REPLACE INTO users(user_id)
-                                    VALUES({int(ctx.user.id)});
-                                    """)
-        
-        self.execute_and_commit(f"""
-                                    INSERT OR REPLACE INTO guild_users(user_id, guild_id, permissions)
-                                    VALUES({int(ctx.user.id)}, {int(ctx.guild_id)}, {await self._derive_user_permissions(ctx)});
-                                    """)
-
-    async def command_checks(self, ctx: SlashContext) -> bool:
-        isValid = await self._confirm_guild(ctx)
-        if isValid:
-            await self._setup_user(ctx)
-            return True
-        return False

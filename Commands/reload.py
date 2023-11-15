@@ -8,28 +8,25 @@ class Reload(Extension):
     def __init__(self, client: Client) -> None:
         self.client = client
         self._parent: Bot = None
-
+    
     @slash_command(
         name = "reload", 
         description = "Reload currently active commands 🔄 (Dev Tool)",
+        dm_permission = False
     )
     async def reload(self, ctx: SlashContext) -> None:
-        isValid = await self._parent.command_checks(ctx)
-        if isValid:
-            permissionsData = self._parent.execute_selection(f"SELECT permissions FROM guild_users WHERE \
-                                                                guild_id = {int(ctx.guild_id)} AND user_id = {int(ctx.user.id)}")
-            permissions: int
-            if permissionsData:
-                permissions = permissionsData[0][0]
-            else:
-                await ctx.send("Unable to load your user data.", ephemeral=True)
-                return
-            
-            if permissions == UserType.DEVELOPER.value:
-                await self._parent.reload_commands()
-                await ctx.send("Reloaded Commands.", ephemeral=True)
-            else:
-                await ctx.send("Your permissions level is not high enough for this command.")
+        await self._parent.sql.setup_bot_info(ctx)
+
+        userPerms = await self._parent.sql.get_guild_user_permissions(int(ctx.guild_id), int(ctx.user.id))
+        if not userPerms:
+            await ctx.send("Unable to load your user data.", ephemeral=True)
+            return
+        
+        if userPerms == UserType.DEVELOPER.value:
+            await self._parent.reload_commands()
+            await ctx.send("Reloaded Commands.", ephemeral=True)
+        else:
+            await ctx.send("Your permissions level is not high enough for this command.")
     
     def add_parent(self, parent: Bot) -> None:
         self._parent = parent
