@@ -1,3 +1,3 @@
-# KonekoV3
+# mallard
 
-A discord bot im going to change the name of.
+A discord bot for a friend's server
