@@ -32,7 +32,7 @@ class AddRole(Extension):
     async def add_role(self, ctx: SlashContext, role: Role, descr: Optional[str] = "") -> None:
         await self._parent.sql.setup_bot_info(ctx)
 
-        cooldown = self._parent.get_cooldown(ctx.user.id, CommandEnums.ADD_REACTION)
+        cooldown = self._parent.get_cooldown(ctx.user.id, CommandEnums.ADD_ROLE)
         if cooldown:
             await ctx.send("You are on cooldown for this command for another " + str(cooldown) + " seconds.",
             ephemeral = True)
@@ -41,7 +41,7 @@ class AddRole(Extension):
         self._parent.sql.add_assignable_guild_role(int(ctx.guild_id), int(role.id), role.name, descr = descr)
 
         await ctx.send(f"Role {role.name} added to self-assignment.", ephemeral=True)
-        self._parent.set_cooldown(CooldownEnums.GLOBAL, CommandEnums.ADD_REACTION, ctx.user.id, 5)
+        self._parent.set_cooldown(CooldownEnums.GLOBAL, CommandEnums.ADD_ROLE, ctx.user.id, 5)
         
     def add_parent(self, parent: Bot) -> None:
         self._parent = parent

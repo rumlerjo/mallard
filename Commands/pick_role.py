@@ -23,7 +23,7 @@ class PickRole(Extension):
         else:
             embed.add_field(name="Role picker", value="Select a role from the dropdown and click 'Apply' to be given that role.")
             if applied:
-                embed.add_field(name="Last applied role:", value=roleName)
+                embed.add_field(name="Last applied role", value=roleName)
         embed.set_footer(text="Interaction available for: " + ctx.user.username, icon_url=ctx.user.avatar_url)
         return embed
     
@@ -47,6 +47,7 @@ class PickRole(Extension):
         roleData = self._get_role_data(ctx)
         filteredData: List[Tuple[int, str, str]] = list()
         userMember = await ctx.guild.fetch_member(ctx.user.id)
+        # using a dict for O(1) accesses, only O(n) instantiation keeping this from O(n^2)
         userRoles = {str(role.id): True for role in userMember.roles}
         for role in roleData:
             if str(role[0]) not in userRoles:
@@ -64,7 +65,7 @@ class PickRole(Extension):
     async def pick_role(self, ctx: SlashContext) -> None:
         await self._parent.sql.setup_bot_info(ctx)
 
-        cooldown = self._parent.get_cooldown(ctx.user.id, CommandEnums.CREATE_REACTION)
+        cooldown = self._parent.get_cooldown(ctx.user.id, CommandEnums.PICK_ROLE)
         if cooldown:
             await ctx.send("You are on cooldown for this command for another " + str(cooldown) + " seconds.",
             ephemeral = True)
@@ -88,7 +89,7 @@ class PickRole(Extension):
         )
 
         await ctx.send(embed=self._make_embed(ctx), ephemeral=True, components = selectMenu)
-        self._parent.set_cooldown(CooldownEnums.GLOBAL, CommandEnums.CREATE_REACTION, ctx.user.id, 5)
+        self._parent.set_cooldown(CooldownEnums.GLOBAL, CommandEnums.PICK_ROLE, ctx.user.id, 5)
 
     @component_callback("SelectRole")
     async def select_role(self, ctx: ComponentContext) -> None:
